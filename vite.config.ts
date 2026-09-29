@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon.png'],
         manifest: {
           id: '/',
-          name: 'AeroLift Pro - Workout Tracker & Strength Analytics',
-          short_name: 'AeroLift',
-          description: 'Production-grade offline-first workout tracking, progressive overload analytics, routine planner, and exercise library.',
+          name: 'ONE PERCENT - Workout Tracker & Strength Analytics',
+          short_name: 'ONE PERCENT',
+          description: 'Minimal offline-first strength tracking, progressive overload analytics, body composition trends, and workout logging.',
           theme_color: '#090d16',
           background_color: '#090d16',
           display: 'standalone',
