@@ -15,15 +15,17 @@ import { Equipment, Exercise, MuscleGroup } from '../../types';
 import { calculateEstimated1RM, formatDuration } from '../../utils/calculations';
 import { CustomExerciseModal } from '../CustomExerciseModal';
 
-const CATEGORIES: (MuscleGroup | 'All')[] = [
+type ExerciseCategory = 'All' | 'Custom' | MuscleGroup;
+
+const CATEGORIES: ExerciseCategory[] = [
   'All',
+  'Custom',
   'Chest',
   'Back',
-  'Shoulders',
   'Legs',
+  'Shoulders',
   'Arms',
   'Core',
-  'Cardio',
 ];
 
 const EQUIPMENTS: (Equipment | 'All')[] = [
@@ -42,7 +44,7 @@ export const ExercisesView: React.FC = () => {
     useWorkout();
 
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<MuscleGroup | 'All'>('All');
+  const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('All');
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | 'All'>('All');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
@@ -52,7 +54,8 @@ export const ExercisesView: React.FC = () => {
   const filteredExercises = useMemo(() => {
     return exercises.filter((ex) => {
       if (onlyFavorites && !ex.isFavorite) return false;
-      if (selectedCategory !== 'All' && ex.category !== selectedCategory) return false;
+      if (selectedCategory === 'Custom' && !ex.isCustom) return false;
+      if (selectedCategory !== 'All' && selectedCategory !== 'Custom' && ex.category !== selectedCategory) return false;
       if (selectedEquipment !== 'All' && ex.equipment !== selectedEquipment) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -215,8 +218,16 @@ export const ExercisesView: React.FC = () => {
         </div>
 
         {filteredExercises.length === 0 ? (
-          <div className="py-12 text-center text-muted text-xs">
-            No exercises match your search criteria.
+          <div className="py-12 text-center text-muted text-xs space-y-3">
+            <p>No exercises match your search criteria.</p>
+            <button
+              onClick={() => setIsCustomModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 active:scale-95 transition-transform"
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Create Custom Exercise</span>
+            </button>
           </div>
         ) : (
           filteredExercises.map((ex) => {

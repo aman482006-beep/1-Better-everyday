@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -8,7 +8,8 @@ import {
   Copy,
   Dumbbell,
   FileText,
-  Link,
+  Flame,
+  Layers,
   MoreVertical,
   Plus,
   Trash2,
@@ -19,6 +20,8 @@ import { Exercise, SetType, WorkoutSet } from '../types';
 import { formatTimerClock } from '../utils/calculations';
 import { AddExerciseModal } from './AddExerciseModal';
 import { CustomExerciseModal } from './CustomExerciseModal';
+import { WeightScrollWheel } from './WeightScrollWheel';
+import { RepsPicker } from './RepsPicker';
 
 interface ActiveWorkoutScreenProps {
   onMinimize: () => void;
@@ -38,12 +41,12 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
     updateSet,
     removeSet,
     toggleSetCompleted,
-    copyPreviousValuesToSet,
     updateActiveWorkoutName,
     updateActiveWorkoutNotes,
     setExerciseSuperset,
     setExerciseNotes,
     getPreviousPerformance,
+    startRestTimer,
   } = useWorkout();
 
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
@@ -51,7 +54,12 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [activeMenuExerciseId, setActiveMenuExerciseId] = useState<string | null>(null);
-  const [openNotesExerciseId, setOpenNotesExerciseId] = useState<string | null>(null);
+
+  // Active selected set for tactile controller
+  const [selectedSetLocation, setSelectedSetLocation] = useState<{
+    workoutExerciseId: string;
+    setId: string;
+  } | null>(null);
 
   const exerciseMap = useMemo(() => {
     const map = new Map<string, Exercise>();
@@ -59,7 +67,37 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
     return map;
   }, [exercises]);
 
+  // Auto-select first uncompleted set on load
+  useEffect(() => {
+    if (!activeWorkout || selectedSetLocation) return;
+    for (const ex of activeWorkout.exercises) {
+      const uncompleted = ex.sets.find((s) => !s.isCompleted);
+      if (uncompleted) {
+        setSelectedSetLocation({ workoutExerciseId: ex.id, setId: uncompleted.id });
+        return;
+      }
+    }
+    // If all completed or none, select first set
+    if (activeWorkout.exercises.length > 0 && activeWorkout.exercises[0].sets.length > 0) {
+      setSelectedSetLocation({
+        workoutExerciseId: activeWorkout.exercises[0].id,
+        setId: activeWorkout.exercises[0].sets[0].id,
+      });
+    }
+  }, [activeWorkout, selectedSetLocation]);
+
   if (!activeWorkout) return null;
+
+  // Find currently selected set details
+  const activeWorkoutExercise = activeWorkout.exercises.find(
+    (e) => e.id === selectedSetLocation?.workoutExerciseId
+  );
+  const activeSet = activeWorkoutExercise?.sets.find(
+    (s) => s.id === selectedSetLocation?.setId
+  );
+  const activeExerciseDef = activeWorkoutExercise
+    ? exerciseMap.get(activeWorkoutExercise.exerciseId)
+    : undefined;
 
   const handleFinish = () => {
     finishActiveWorkout();
@@ -70,28 +108,76 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
     setShowDiscardConfirm(false);
   };
 
-  const setTypeLabels: Record<SetType, { label: string; bg: string; text: string }> = {
-    normal: { label: '', bg: 'bg-surface-subtle text-main border border-subtle', text: '' },
-    warmup: { label: 'W', bg: 'bg-amber-500/10 text-amber-500 font-bold border border-amber-500/30', text: 'Warmup' },
-    drop: { label: 'D', bg: 'bg-purple-500/10 text-purple-500 font-bold border border-purple-500/30', text: 'Drop' },
-    failure: { label: 'F', bg: 'bg-rose-500/10 text-rose-500 font-bold border border-rose-500/30', text: 'Failure' },
+  // Log Set action (Enter key or button)
+  const handleLogCurrentSet = () => {
+    if (!activeWorkoutExercise || !activeSet) return;
+
+    // 1. Mark current set completed
+    if (!activeSet.isCompleted) {
+      toggleSetCompleted(activeWorkoutExercise.id, activeSet.id);
+    }
+
+    // 2. Start rest timer if enabled
+    if (userProfile.autoStartRestTimer) {
+      startRestTimer(
+        activeWorkoutExercise.restTimeSeconds || userProfile.defaultRestSeconds,
+        activeExerciseDef?.name
+      );
+    }
+
+    // 3. Find next set or create next set with same weight/reps
+    const currentIdx = activeWorkoutExercise.sets.findIndex((s) => s.id === activeSet.id);
+    if (currentIdx < activeWorkoutExercise.sets.length - 1) {
+      // Advance to next existing set
+      const nextSet = activeWorkoutExercise.sets[currentIdx + 1];
+      // Pre-fill weight and reps if next set is 0
+      if (nextSet.weight === 0 && nextSet.reps === 0) {
+        updateSet(activeWorkoutExercise.id, nextSet.id, {
+          weight: activeSet.weight,
+          reps: activeSet.reps,
+        });
+      }
+      setSelectedSetLocation({
+        workoutExerciseId: activeWorkoutExercise.id,
+        setId: nextSet.id,
+      });
+    } else {
+      // Last set of this exercise: Auto-add next set or advance to next exercise
+      const exIdx = activeWorkout.exercises.findIndex((e) => e.id === activeWorkoutExercise.id);
+      if (exIdx < activeWorkout.exercises.length - 1) {
+        // Move to next exercise's first set
+        const nextEx = activeWorkout.exercises[exIdx + 1];
+        if (nextEx.sets.length > 0) {
+          setSelectedSetLocation({
+            workoutExerciseId: nextEx.id,
+            setId: nextEx.sets[0].id,
+          });
+        }
+      }
+    }
   };
 
-  const cycleSetType = (workoutExerciseId: string, set: WorkoutSet) => {
-    const types: SetType[] = ['normal', 'warmup', 'drop', 'failure'];
-    const nextIdx = (types.indexOf(set.type) + 1) % types.length;
-    updateSet(workoutExerciseId, set.id, { type: types[nextIdx] });
-  };
+  // Keyboard shortcut: Pressing Enter logs the set
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !editingTitle && !(e.target instanceof HTMLInputElement && e.target.type === 'text')) {
+        e.preventDefault();
+        handleLogCurrentSet();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
 
   return (
-    <div className="fixed inset-0 z-50 bg-app text-main flex flex-col overflow-hidden animate-in fade-in duration-200 transition-colors">
+    <div className="fixed inset-0 z-50 bg-app text-main flex flex-col overflow-hidden animate-in fade-in duration-150 transition-colors">
       {/* Top App Bar */}
       <header className="sticky top-0 z-20 bg-surface/95 backdrop-blur-md border-b border-subtle px-4 py-3 pt-safe transition-colors">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <button
             onClick={onMinimize}
             className="p-2 -ml-2 rounded-xl text-muted hover:text-main hover:bg-surface-subtle transition-colors"
-            title="Minimize workout view"
+            title="Minimize workout"
           >
             <ChevronDown className="w-6 h-6" />
           </button>
@@ -105,19 +191,18 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
                 onChange={(e) => updateActiveWorkoutName(e.target.value)}
                 onBlur={() => setEditingTitle(false)}
                 onKeyDown={(e) => e.key === 'Enter' && setEditingTitle(false)}
-                className="bg-surface-subtle border border-subtle text-center font-bold text-sm text-main rounded-lg px-2 py-1 w-full max-w-[200px]"
+                className="bg-surface-subtle border border-subtle text-center font-black text-base text-main rounded-xl px-2 py-1 w-full max-w-[220px]"
               />
             ) : (
-              <div
+              <button
                 onClick={() => setEditingTitle(true)}
-                className="font-display font-bold text-sm text-main truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center gap-1.5"
+                className="font-display font-extrabold text-base text-main truncate hover:opacity-80 transition-opacity"
               >
-                <span>{activeWorkout.name}</span>
-                <span className="text-[10px] text-muted">✎</span>
-              </div>
+                {activeWorkout.name}
+              </button>
             )}
-            <div className="flex items-center justify-center gap-1.5 text-xs text-muted mt-0.5 font-mono-numbers">
-              <Clock className="w-3 h-3 text-muted" />
+            <div className="flex items-center justify-center gap-2 text-xs text-muted font-mono-numbers">
+              <Clock className="w-3.5 h-3.5 text-muted" />
               <span>{formatTimerClock(activeWorkout.durationSeconds)}</span>
               <span>·</span>
               <span>{activeWorkout.exercises.length} Exercises</span>
@@ -134,7 +219,7 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
             </button>
             <button
               onClick={handleFinish}
-              className="px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform"
+              className="px-4 py-2 rounded-xl font-black text-xs shadow-md active:scale-95 transition-transform"
               style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
             >
               Finish
@@ -143,38 +228,27 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 pb-28 max-w-xl w-full mx-auto space-y-4">
-        {/* Workout Notes */}
-        <div className="bg-surface border border-subtle rounded-2xl p-3 shadow-sm transition-colors">
-          <input
-            type="text"
-            value={activeWorkout.notes || ''}
-            onChange={(e) => updateActiveWorkoutNotes(e.target.value)}
-            placeholder="Add general workout notes..."
-            className="w-full bg-transparent text-xs text-main placeholder-muted focus:outline-none"
-          />
-        </div>
-
-        {/* Exercises List */}
+      {/* Main Exercises List */}
+      <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 pb-80 max-w-xl w-full mx-auto space-y-4">
         {activeWorkout.exercises.length === 0 ? (
-          <div className="py-16 text-center text-muted bg-surface border border-dashed border-subtle rounded-3xl p-6 transition-colors">
+          <div className="py-16 text-center text-muted bg-surface border border-subtle rounded-3xl p-6 transition-colors space-y-3">
             <div
-              className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center mb-3 border border-subtle"
-              style={{ backgroundColor: 'var(--accent-subtle)' }}
+              className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center shadow-sm"
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
             >
-              <Dumbbell className="w-6 h-6 text-main" />
+              <Dumbbell className="w-7 h-7" />
             </div>
-            <h3 className="text-base font-bold text-main">No exercises added yet</h3>
-            <p className="text-xs text-muted mt-1 max-w-xs mx-auto">
-              Start your workout by adding your first exercise from the library.
+            <h3 className="text-lg font-extrabold text-main">Workout is empty</h3>
+            <p className="text-xs text-secondary max-w-xs mx-auto">
+              Add your first exercise to begin logging weight and reps.
             </p>
             <button
               onClick={() => setIsAddExerciseOpen(true)}
-              className="mt-4 px-4 py-2.5 rounded-xl text-xs font-bold shadow-md inline-flex items-center gap-1.5 active:scale-95 transition-transform"
+              className="mt-2 px-5 py-3 rounded-2xl text-xs font-extrabold shadow-md inline-flex items-center gap-2 active:scale-95 transition-transform"
               style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
             >
-              <Plus className="w-4 h-4" /> Add Exercise
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Choose Exercise</span>
             </button>
           </div>
         ) : (
@@ -182,34 +256,34 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
             const exerciseDef = exerciseMap.get(workoutExercise.exerciseId);
             const prevPerf = getPreviousPerformance(workoutExercise.exerciseId);
             const isMenuOpen = activeMenuExerciseId === workoutExercise.id;
-            const hasNotesOpen = openNotesExerciseId === workoutExercise.id;
 
             return (
               <div
                 key={workoutExercise.id}
-                className="bg-surface border border-subtle rounded-2xl overflow-hidden shadow-sm transition-colors"
+                className="bg-surface border border-subtle rounded-3xl overflow-hidden shadow-sm transition-colors"
               >
                 {/* Exercise Header */}
-                <div className="p-3.5 border-b border-subtle flex items-start justify-between bg-surface-subtle/50">
+                <div className="p-4 border-b border-subtle flex items-start justify-between bg-surface-subtle/40">
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-2">
                       {workoutExercise.supersetId && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30 uppercase tracking-wider">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30 uppercase tracking-wider">
                           Superset {workoutExercise.supersetId}
                         </span>
                       )}
-                      <h3 className="text-sm font-bold text-main truncate">
+                      <h2 className="text-base sm:text-lg font-black text-main truncate">
                         {exerciseDef?.name || 'Exercise'}
-                      </h3>
+                      </h2>
                     </div>
-                    <div className="text-[11px] text-muted flex items-center gap-2 mt-0.5 font-mono-numbers">
-                      <span>{exerciseDef?.primaryMuscle}</span>
+
+                    <div className="text-xs text-muted flex items-center gap-2 mt-0.5">
+                      <span className="font-semibold">{exerciseDef?.primaryMuscle}</span>
                       <span>·</span>
                       <span>{exerciseDef?.equipment}</span>
                       {prevPerf && prevPerf.lastSets.length > 0 && (
                         <>
                           <span>·</span>
-                          <span className="text-secondary font-semibold">
+                          <span className="text-secondary font-bold font-mono-numbers">
                             Prev: {prevPerf.lastSets[0].weight} {userProfile.unitPreference} × {prevPerf.lastSets[0].reps}
                           </span>
                         </>
@@ -217,34 +291,19 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
                     </div>
                   </div>
 
-                  {/* Actions dropdown / controls */}
-                  <div className="relative flex items-center gap-1">
-                    <button
-                      onClick={() =>
-                        setOpenNotesExerciseId(hasNotesOpen ? null : workoutExercise.id)
-                      }
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        workoutExercise.notes
-                          ? 'text-main bg-surface-subtle border border-subtle'
-                          : 'text-muted hover:text-main'
-                      }`}
-                      title="Exercise notes"
-                    >
-                      <FileText className="w-4 h-4" />
-                    </button>
-
+                  {/* Options Menu Trigger */}
+                  <div className="relative">
                     <button
                       onClick={() =>
                         setActiveMenuExerciseId(isMenuOpen ? null : workoutExercise.id)
                       }
-                      className="p-1.5 rounded-lg text-muted hover:text-main hover:bg-surface-subtle transition-colors"
+                      className="p-2 rounded-xl text-muted hover:text-main hover:bg-surface-subtle transition-colors"
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
 
-                    {/* Context menu */}
                     {isMenuOpen && (
-                      <div className="absolute right-0 top-8 z-30 w-44 rounded-xl bg-surface border border-subtle shadow-2xl py-1 text-xs text-main animate-in fade-in duration-100">
+                      <div className="absolute right-0 top-9 z-30 w-44 rounded-2xl bg-surface border border-subtle shadow-2xl py-1 text-xs font-semibold text-main animate-in fade-in duration-100">
                         {exIdx > 0 && (
                           <button
                             onClick={() => {
@@ -267,17 +326,6 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
                             <ArrowDown className="w-3.5 h-3.5" /> Move Down
                           </button>
                         )}
-                        <button
-                          onClick={() => {
-                            const newSuperset = workoutExercise.supersetId ? undefined : 'A';
-                            setExerciseSuperset(workoutExercise.id, newSuperset);
-                            setActiveMenuExerciseId(null);
-                          }}
-                          className="w-full px-3 py-2 text-left hover:bg-surface-subtle flex items-center gap-2"
-                        >
-                          <Link className="w-3.5 h-3.5" />{' '}
-                          {workoutExercise.supersetId ? 'Remove Superset' : 'Group Superset A'}
-                        </button>
                         <div className="border-t border-subtle my-1" />
                         <button
                           onClick={() => {
@@ -293,180 +341,219 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({ onMini
                   </div>
                 </div>
 
-                {/* Optional Exercise Notes input */}
-                {hasNotesOpen && (
-                  <div className="px-3.5 py-2 bg-surface-subtle border-b border-subtle">
-                    <input
-                      type="text"
-                      value={workoutExercise.notes || ''}
-                      onChange={(e) => setExerciseNotes(workoutExercise.id, e.target.value)}
-                      placeholder="Seat height 4, wide grip, slow tempo..."
-                      className="w-full bg-transparent text-xs text-main placeholder-muted focus:outline-none"
-                    />
-                  </div>
-                )}
+                {/* Sets List */}
+                <div className="p-3 sm:p-4 space-y-2">
+                  {workoutExercise.sets.map((set, setIndex) => {
+                    const isSelected =
+                      selectedSetLocation?.workoutExerciseId === workoutExercise.id &&
+                      selectedSetLocation?.setId === set.id;
 
-                {/* Sets Table */}
-                <div className="p-2 sm:p-3">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-1 text-[11px] font-bold text-muted px-1 pb-1 uppercase tracking-wider text-center">
-                    <span className="col-span-2 text-left pl-1">Set</span>
-                    <span className="col-span-3">Previous</span>
-                    <span className="col-span-3">{userProfile.unitPreference}</span>
-                    <span className="col-span-2">Reps</span>
-                    <span className="col-span-2">✓</span>
-                  </div>
+                    const isDropSet = set.type === 'drop';
+                    const isWarmup = set.type === 'warmup';
 
-                  {/* Set Rows */}
-                  <div className="space-y-1.5 mt-1">
-                    {workoutExercise.sets.map((set, setIndex) => {
-                      const prevSet = prevPerf?.lastSets[setIndex] || prevPerf?.lastSets[0];
-                      const setConfig = setTypeLabels[set.type];
-
-                      return (
-                        <div
-                          key={set.id}
-                          className={`grid grid-cols-12 gap-1 items-center p-1 rounded-xl transition-colors ${
-                            set.isCompleted
-                              ? 'bg-surface-subtle border border-main'
-                              : 'bg-surface border border-subtle hover:border-strong'
-                          }`}
-                        >
-                          {/* Set number & type button */}
-                          <div className="col-span-2 flex items-center gap-1 pl-1">
-                            <button
-                              type="button"
-                              onClick={() => cycleSetType(workoutExercise.id, set)}
-                              className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center transition-transform active:scale-95 ${
-                                setConfig.bg
-                              }`}
-                              title="Click to toggle Normal, Warmup, Drop, Failure"
-                            >
-                              {setConfig.label || set.setNumber}
-                            </button>
-                          </div>
-
-                          {/* Previous value display & one-tap copy button */}
-                          <div className="col-span-3 text-center">
-                            {prevSet ? (
-                              <button
-                                type="button"
-                                onClick={() => copyPreviousValuesToSet(workoutExercise.id, set.id)}
-                                className="text-[11px] font-mono-numbers text-muted hover:text-main flex items-center justify-center gap-1 mx-auto transition-colors"
-                                title="Click to copy previous set weight & reps"
-                              >
-                                <span>
-                                  {prevSet.weight} × {prevSet.reps}
-                                </span>
-                                <Copy className="w-2.5 h-2.5 opacity-60" />
-                              </button>
-                            ) : (
-                              <span className="text-[11px] text-muted">-</span>
-                            )}
-                          </div>
-
-                          {/* Weight input */}
-                          <div className="col-span-3">
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={set.weight === 0 ? '' : set.weight}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                updateSet(workoutExercise.id, set.id, { weight: val });
-                              }}
-                              placeholder="0"
-                              className="w-full bg-surface-subtle border border-subtle rounded-lg py-1.5 text-center text-xs font-bold font-mono-numbers text-main placeholder-muted focus:outline-none focus:ring-1 focus:ring-main"
-                            />
-                          </div>
-
-                          {/* Reps input */}
-                          <div className="col-span-2">
-                            <input
-                              type="number"
-                              value={set.reps === 0 ? '' : set.reps}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10) || 0;
-                                updateSet(workoutExercise.id, set.id, { reps: val });
-                              }}
-                              placeholder="0"
-                              className="w-full bg-surface-subtle border border-subtle rounded-lg py-1.5 text-center text-xs font-bold font-mono-numbers text-main placeholder-muted focus:outline-none focus:ring-1 focus:ring-main"
-                            />
-                          </div>
-
-                          {/* Checkbox button */}
-                          <div className="col-span-2 flex items-center justify-center">
-                            <button
-                              type="button"
-                              onClick={() => toggleSetCompleted(workoutExercise.id, set.id)}
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90 border border-subtle ${
-                                set.isCompleted
-                                  ? 'shadow-sm'
-                                  : 'bg-surface-subtle text-muted hover:text-main'
-                              }`}
-                              style={{
-                                backgroundColor: set.isCompleted ? 'var(--accent)' : undefined,
-                                color: set.isCompleted ? 'var(--accent-text)' : undefined,
-                                borderColor: set.isCompleted ? 'var(--accent)' : undefined,
-                              }}
-                              title="Mark set complete (triggers rest timer)"
-                            >
-                              <Check className="w-4 h-4 stroke-[3]" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Add set / Delete set actions */}
-                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-subtle">
-                    <button
-                      onClick={() => addSetToExercise(workoutExercise.id, 'normal')}
-                      className="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface border border-subtle active:scale-95 text-xs font-bold text-main transition-colors inline-flex items-center gap-1.5"
-                    >
-                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> Add Set
-                    </button>
-
-                    {workoutExercise.sets.length > 1 && (
-                      <button
-                        onClick={() => {
-                          const lastSet = workoutExercise.sets[workoutExercise.sets.length - 1];
-                          removeSet(workoutExercise.id, lastSet.id);
-                        }}
-                        className="px-2 py-1 text-[11px] text-muted hover:text-rose-500 transition-colors"
+                    return (
+                      <div
+                        key={set.id}
+                        onClick={() =>
+                          setSelectedSetLocation({
+                            workoutExerciseId: workoutExercise.id,
+                            setId: set.id,
+                          })
+                        }
+                        className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-main shadow-sm bg-surface-subtle/80 ring-1 ring-main'
+                            : set.isCompleted
+                            ? 'bg-surface-subtle/40 border-subtle opacity-90'
+                            : 'bg-surface border-subtle hover:border-main'
+                        }`}
                       >
-                        Remove Last Set
-                      </button>
-                    )}
-                  </div>
+                        {/* Set badge & label */}
+                        <div className="flex items-center gap-2.5 min-w-[70px]">
+                          <span
+                            className={`w-7 h-7 rounded-xl font-mono text-xs font-black flex items-center justify-center border transition-colors ${
+                              isDropSet
+                                ? 'bg-purple-500/10 text-purple-500 border-purple-500/30'
+                                : isWarmup
+                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                                : 'bg-surface-subtle text-main border-subtle'
+                            }`}
+                          >
+                            {isDropSet ? 'D' : isWarmup ? 'W' : set.setNumber}
+                          </span>
+                          <span className="text-xs font-extrabold text-main">
+                            Set {set.setNumber}
+                          </span>
+                        </div>
+
+                        {/* Weight and Reps Display */}
+                        <div className="flex items-baseline gap-2 text-center flex-1 justify-center">
+                          <span className="text-base sm:text-lg font-black font-mono-numbers text-main">
+                            {set.weight > 0 ? set.weight : '—'}
+                          </span>
+                          <span className="text-xs font-bold text-muted font-mono">
+                            {userProfile.unitPreference}
+                          </span>
+                          <span className="text-xs text-muted font-bold">×</span>
+                          <span className="text-base sm:text-lg font-black font-mono-numbers text-main">
+                            {set.reps > 0 ? set.reps : '—'}
+                          </span>
+                          <span className="text-xs font-bold text-muted">reps</span>
+                        </div>
+
+                        {/* Completed Checkmark Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSetCompleted(workoutExercise.id, set.id);
+                          }}
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all active:scale-90 ${
+                            set.isCompleted
+                              ? 'shadow-sm'
+                              : 'bg-surface-subtle text-muted hover:text-main border-subtle'
+                          }`}
+                          style={{
+                            backgroundColor: set.isCompleted ? 'var(--accent)' : undefined,
+                            color: set.isCompleted ? 'var(--accent-text)' : undefined,
+                            borderColor: set.isCompleted ? 'var(--accent)' : undefined,
+                          }}
+                        >
+                          <Check className="w-5 h-5 stroke-[2.5]" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add Set Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addSetToExercise(workoutExercise.id);
+                    }}
+                    className="w-full py-2.5 rounded-2xl bg-surface-subtle hover:bg-surface border border-subtle text-xs font-bold text-main flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Add Set</span>
+                  </button>
                 </div>
               </div>
             );
           })
         )}
 
-        {/* Big Add Exercise Button */}
+        {/* Add Another Exercise Button */}
         {activeWorkout.exercises.length > 0 && (
           <button
             onClick={() => setIsAddExerciseOpen(true)}
-            className="w-full py-3.5 rounded-2xl bg-surface hover:bg-surface-subtle border border-subtle text-sm font-bold text-main flex items-center justify-center gap-2 transition-colors active:scale-[0.99] shadow-sm"
+            className="w-full py-3.5 rounded-2xl border border-dashed border-subtle hover:border-main bg-surface-subtle/50 text-xs font-extrabold text-main flex items-center justify-center gap-2 transition-colors active:scale-98 shadow-sm"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" /> Add Exercise
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add Exercise</span>
           </button>
         )}
       </main>
 
-      {/* Discard Confirmation Dialog */}
+      {/* Floating Bottom Tactile Set Controller Drawer */}
+      {activeSet && activeWorkoutExercise && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface/98 backdrop-blur-xl border-t border-subtle p-3 sm:p-4 pb-safe shadow-2xl animate-in slide-in-from-bottom-4 duration-150">
+          <div className="max-w-md mx-auto space-y-3">
+            {/* Controller Header: Current Exercise & Set info */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-muted uppercase tracking-wider font-mono">
+                  Set {activeSet.setNumber}
+                </span>
+                <span className="text-xs font-extrabold text-main truncate max-w-[170px]">
+                  {activeExerciseDef?.name}
+                </span>
+              </div>
+
+              {/* Set Preferences / Types: Normal, Drop Set, Warmup */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateSet(activeWorkoutExercise.id, activeSet.id, {
+                      type: activeSet.type === 'drop' ? 'normal' : 'drop',
+                    })
+                  }
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+                    activeSet.type === 'drop'
+                      ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                      : 'bg-surface-subtle text-muted hover:text-main border-subtle'
+                  }`}
+                >
+                  Drop Set
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateSet(activeWorkoutExercise.id, activeSet.id, {
+                      type: activeSet.type === 'warmup' ? 'normal' : 'warmup',
+                    })
+                  }
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+                    activeSet.type === 'warmup'
+                      ? 'bg-amber-600 text-white border-amber-500 shadow-sm'
+                      : 'bg-surface-subtle text-muted hover:text-main border-subtle'
+                  }`}
+                >
+                  Warmup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeSet(activeWorkoutExercise.id, activeSet.id)}
+                  className="p-1 rounded-lg text-muted hover:text-rose-500 transition-colors ml-1"
+                  title="Delete Set"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Tactile Weight Scroll Wheel */}
+            <WeightScrollWheel
+              value={activeSet.weight}
+              unit={userProfile.unitPreference}
+              onChange={(val) => {
+                updateSet(activeWorkoutExercise.id, activeSet.id, { weight: val });
+              }}
+            />
+
+            {/* Tactile Reps Number Selector */}
+            <RepsPicker
+              value={activeSet.reps || 10}
+              onChange={(val) => {
+                updateSet(activeWorkoutExercise.id, activeSet.id, { reps: val });
+              }}
+            />
+
+            {/* Main Log Set CTA (Big touch target) */}
+            <button
+              type="button"
+              onClick={handleLogCurrentSet}
+              className="w-full py-3.5 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
+            >
+              <Check className="w-5 h-5 stroke-[3]" />
+              <span>{activeSet.isCompleted ? 'Update Set (Enter)' : 'Log Set (Enter)'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Discard Confirmation Modal */}
       {showDiscardConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl bg-surface border border-subtle p-5 shadow-2xl text-main">
-            <h3 className="text-base font-bold text-main">Discard Workout?</h3>
-            <p className="mt-2 text-xs text-muted leading-relaxed">
-              Are you sure you want to discard this workout? All logged sets for this session will be
-              permanently lost.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
+          <div className="bg-surface border border-subtle rounded-3xl w-full max-w-sm shadow-2xl p-5 text-main">
+            <h3 className="text-base font-extrabold text-main font-display">
+              Discard Workout?
+            </h3>
+            <p className="mt-2 text-xs text-secondary">
+              This workout session will not be saved. All logged sets will be discarded.
             </p>
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={() => setShowDiscardConfirm(false)}
                 className="flex-1 py-2.5 rounded-xl bg-surface-subtle border border-subtle hover:bg-surface text-xs font-bold text-main"

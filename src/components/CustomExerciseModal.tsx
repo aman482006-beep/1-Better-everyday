@@ -1,28 +1,22 @@
 import React, { useState } from 'react';
 import { Dumbbell, Plus, X } from 'lucide-react';
 import { useWorkout } from '../context/WorkoutContext';
-import { Equipment, ExerciseType, MuscleGroup } from '../types';
+import { Equipment, MuscleGroup } from '../types';
 
 interface CustomExerciseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated?: (exerciseId: string) => void;
+  initialName?: string;
 }
 
 const MUSCLE_GROUPS: MuscleGroup[] = [
   'Chest',
   'Back',
+  'Legs',
   'Shoulders',
   'Arms',
-  'Biceps',
-  'Triceps',
-  'Legs',
-  'Quads',
-  'Hamstrings',
-  'Glutes',
-  'Calves',
   'Core',
-  'Cardio',
 ];
 
 const EQUIPMENTS: Equipment[] = [
@@ -31,23 +25,19 @@ const EQUIPMENTS: Equipment[] = [
   'Cable',
   'Machine',
   'Bodyweight',
-  'Kettlebell',
-  'Resistance Band',
   'Smith Machine',
-  'Cardio Equipment',
 ];
 
 export const CustomExerciseModal: React.FC<CustomExerciseModalProps> = ({
   isOpen,
   onClose,
   onCreated,
+  initialName = '',
 }) => {
   const { addCustomExercise, userProfile } = useWorkout();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [category, setCategory] = useState<MuscleGroup>('Chest');
   const [equipment, setEquipment] = useState<Equipment>('Barbell');
-  const [exerciseType, setExerciseType] = useState<ExerciseType>('weight_reps');
-  const [instructions, setInstructions] = useState('');
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
@@ -55,7 +45,7 @@ export const CustomExerciseModal: React.FC<CustomExerciseModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Please provide an exercise name.');
+      setError('Please enter an exercise name.');
       return;
     }
 
@@ -64,8 +54,8 @@ export const CustomExerciseModal: React.FC<CustomExerciseModalProps> = ({
       category,
       primaryMuscle: category,
       equipment,
-      exerciseType,
-      instructions: instructions.trim() || 'Custom exercise instructions.',
+      exerciseType: 'weight_reps',
+      instructions: `${name.trim()} - Custom exercise`,
       defaultUnit: userProfile.unitPreference,
     });
 
@@ -74,23 +64,23 @@ export const CustomExerciseModal: React.FC<CustomExerciseModalProps> = ({
     }
 
     setName('');
-    setInstructions('');
     setError('');
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-surface border border-subtle rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col text-main transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
+      <div className="bg-surface border border-subtle rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col text-main transition-colors">
+        {/* Header */}
         <div className="p-4 border-b border-subtle flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center border border-subtle"
-              style={{ backgroundColor: 'var(--accent-subtle)' }}
+              className="w-8 h-8 rounded-xl flex items-center justify-center border border-subtle shadow-xs"
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
             >
-              <Dumbbell className="w-4 h-4 text-main" />
+              <Dumbbell className="w-4 h-4" />
             </div>
-            <h2 className="text-base font-bold text-main font-display">New Custom Exercise</h2>
+            <h2 className="text-base font-extrabold text-main font-display">New Exercise</h2>
           </div>
           <button
             onClick={onClose}
@@ -100,137 +90,107 @@ export const CustomExerciseModal: React.FC<CustomExerciseModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-rose-500 text-xs">
+            <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-rose-500 text-xs font-semibold">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-secondary mb-1">Exercise Name *</label>
+            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
+              Exercise Name
+            </label>
             <input
               type="text"
+              autoFocus
               required
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
                 if (error) setError('');
               }}
-              placeholder="e.g. Pendlay Row, Nordic Curl..."
-              className="w-full bg-surface-subtle border border-subtle rounded-xl px-3 py-2 text-sm text-main placeholder-muted focus:outline-none focus:ring-1 focus:ring-main"
+              placeholder="e.g. Incline Smith Press, Pendlay Row..."
+              className="w-full bg-surface-subtle border border-subtle rounded-xl px-3.5 py-2.5 text-base font-semibold text-main placeholder-muted focus:outline-none focus:ring-1 focus:ring-main shadow-inner"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-secondary mb-1">Primary Muscle</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as MuscleGroup)}
-                className="w-full bg-surface-subtle border border-subtle rounded-xl px-3 py-2 text-xs text-main focus:outline-none"
-              >
-                {MUSCLE_GROUPS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-secondary mb-1">Equipment</label>
-              <select
-                value={equipment}
-                onChange={(e) => setEquipment(e.target.value as Equipment)}
-                className="w-full bg-surface-subtle border border-subtle rounded-xl px-3 py-2 text-xs text-main focus:outline-none"
-              >
-                {EQUIPMENTS.map((eq) => (
-                  <option key={eq} value={eq}>
-                    {eq}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div>
-            <label className="block text-xs font-semibold text-secondary mb-1">Tracking Type</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setExerciseType('weight_reps')}
-                className={`py-2 px-3 rounded-xl text-xs font-medium border text-left transition-colors ${
-                  exerciseType === 'weight_reps'
-                    ? 'border-main bg-surface-subtle text-main font-bold'
-                    : 'border-subtle bg-surface text-muted hover:text-main'
-                }`}
-              >
-                Weight &amp; Reps
-              </button>
-              <button
-                type="button"
-                onClick={() => setExerciseType('bodyweight_reps')}
-                className={`py-2 px-3 rounded-xl text-xs font-medium border text-left transition-colors ${
-                  exerciseType === 'bodyweight_reps'
-                    ? 'border-main bg-surface-subtle text-main font-bold'
-                    : 'border-subtle bg-surface text-muted hover:text-main'
-                }`}
-              >
-                Bodyweight Reps
-              </button>
-              <button
-                type="button"
-                onClick={() => setExerciseType('duration')}
-                className={`py-2 px-3 rounded-xl text-xs font-medium border text-left transition-colors ${
-                  exerciseType === 'duration'
-                    ? 'border-main bg-surface-subtle text-main font-bold'
-                    : 'border-subtle bg-surface text-muted hover:text-main'
-                }`}
-              >
-                Time / Duration
-              </button>
-              <button
-                type="button"
-                onClick={() => setExerciseType('distance_time')}
-                className={`py-2 px-3 rounded-xl text-xs font-medium border text-left transition-colors ${
-                  exerciseType === 'distance_time'
-                    ? 'border-main bg-surface-subtle text-main font-bold'
-                    : 'border-subtle bg-surface text-muted hover:text-main'
-                }`}
-              >
-                Distance &amp; Time
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-secondary mb-1">
-              Instructions or Setup Notes (Optional)
+            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
+              Muscle Target
             </label>
-            <textarea
-              rows={2}
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="e.g. Set bench angle to 45 degrees, pause 1s at bottom..."
-              className="w-full bg-surface-subtle border border-subtle rounded-xl px-3 py-2 text-xs text-main placeholder-muted focus:outline-none"
-            />
+            <div className="grid grid-cols-3 gap-1.5">
+              {MUSCLE_GROUPS.map((m) => {
+                const isSelected = category === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setCategory(m)}
+                    className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all text-center ${
+                      isSelected
+                        ? 'border-main shadow-sm'
+                        : 'bg-surface-subtle border-subtle text-muted hover:text-main'
+                    }`}
+                    style={{
+                      backgroundColor: isSelected ? 'var(--accent)' : undefined,
+                      color: isSelected ? 'var(--accent-text)' : undefined,
+                      borderColor: isSelected ? 'var(--accent)' : undefined,
+                    }}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
+              Equipment
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {EQUIPMENTS.map((eq) => {
+                const isSelected = equipment === eq;
+                return (
+                  <button
+                    key={eq}
+                    type="button"
+                    onClick={() => setEquipment(eq)}
+                    className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all text-center ${
+                      isSelected
+                        ? 'border-main shadow-sm'
+                        : 'bg-surface-subtle border-subtle text-muted hover:text-main'
+                    }`}
+                    style={{
+                      backgroundColor: isSelected ? 'var(--accent)' : undefined,
+                      color: isSelected ? 'var(--accent-text)' : undefined,
+                      borderColor: isSelected ? 'var(--accent)' : undefined,
+                    }}
+                  >
+                    {eq}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="pt-2 flex items-center gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl bg-surface-subtle hover:bg-surface border border-subtle text-xs font-semibold text-main"
+              className="flex-1 py-3 rounded-xl bg-surface-subtle hover:bg-surface border border-subtle text-xs font-bold text-main"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold shadow-md active:scale-95 transition-transform"
+              className="flex-1 py-3 rounded-xl text-xs font-extrabold shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5"
               style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
             >
-              Save Exercise
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Create Exercise</span>
             </button>
           </div>
         </form>

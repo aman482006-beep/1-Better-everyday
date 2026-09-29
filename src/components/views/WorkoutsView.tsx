@@ -24,6 +24,7 @@ import { useWorkout } from '../../context/WorkoutContext';
 import { Routine, RoutineExercise, WorkoutSession } from '../../types';
 import { formatDuration } from '../../utils/calculations';
 import { AddExerciseModal } from '../AddExerciseModal';
+import { CustomExerciseModal } from '../CustomExerciseModal';
 
 interface WorkoutsViewProps {
   onStartEmpty: () => void;
@@ -63,6 +64,7 @@ export const WorkoutsView: React.FC<WorkoutsViewProps> = ({ onStartEmpty }) => {
   const [routineDesc, setRoutineDesc] = useState('');
   const [routineExercises, setRoutineExercises] = useState<RoutineExercise[]>([]);
   const [isAddExerciseToRoutineOpen, setIsAddExerciseToRoutineOpen] = useState(false);
+  const [isCreateCustomOpen, setIsCreateCustomOpen] = useState(false);
 
   const exerciseMap = useMemo(() => {
     return new Map(exercises.map((e) => [e.id, e]));
@@ -684,7 +686,19 @@ export const WorkoutsView: React.FC<WorkoutsViewProps> = ({ onStartEmpty }) => {
         isOpen={isAddExerciseToRoutineOpen}
         onClose={() => setIsAddExerciseToRoutineOpen(false)}
         onAddExercises={handleAddExercisesToRoutine}
-        onOpenCreateCustom={() => {}}
+        onOpenCreateCustom={() => {
+          setIsAddExerciseToRoutineOpen(false);
+          setIsCreateCustomOpen(true);
+        }}
+      />
+
+      {/* Create Custom Exercise Modal */}
+      <CustomExerciseModal
+        isOpen={isCreateCustomOpen}
+        onClose={() => setIsCreateCustomOpen(false)}
+        onCreated={(newExId) => {
+          handleAddExercisesToRoutine([newExId]);
+        }}
       />
 
       {/* Workout Side-by-Side Comparison Modal */}
