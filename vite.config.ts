@@ -6,6 +6,7 @@ import {VitePWA} from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
+    base: '/1-Better-everyday/',
     plugins: [
       react(),
       tailwindcss(),
@@ -13,30 +14,30 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon.png'],
         manifest: {
-          id: '/',
+          id: '/1-Better-everyday/',
           name: 'ONE PERCENT - Workout Tracker & Strength Analytics',
           short_name: 'ONE PERCENT',
           description: 'Minimal offline-first strength tracking, progressive overload analytics, body composition trends, and workout logging.',
           theme_color: '#090d16',
           background_color: '#090d16',
           display: 'standalone',
-          start_url: '/',
-          scope: '/',
+          start_url: '/1-Better-everyday/',
+          scope: '/1-Better-everyday/',
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: '/1-Better-everyday/pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: '/1-Better-everyday/pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: '/1-Better-everyday/pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
