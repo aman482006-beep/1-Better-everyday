@@ -1,0 +1,496 @@
+import { BodyMeasurementLog, BodyWeightLog, PersonalRecord, Routine, UserProfile, WorkoutProgram, WorkoutSession } from '../types';
+
+export const INITIAL_USER_PROFILE: UserProfile = {
+  id: 'user-default-1',
+  name: 'Alex Mercer',
+  trainingGoal: 'hypertrophy',
+  experienceLevel: 'intermediate',
+  unitPreference: 'kg',
+  themePreference: 'dark',
+  activeThemeId: 'mono-oled',
+  accentColor: '#ffffff', // Minimal Stark Monochrome
+  targetWeightKg: 75,
+  targetBodyFatPercent: 13.5,
+  defaultRestSeconds: 90,
+  autoStartRestTimer: true,
+  rmFormula: 'epley',
+  onboarded: true,
+};
+
+export const INITIAL_ROUTINES: Routine[] = [
+  {
+    id: 'routine-push-a',
+    name: 'Push Hypertrophy',
+    description: 'Heavy chest focus with anterior delts and tricep overload',
+    category: 'Push',
+    estimatedDurationMinutes: 60,
+    daysOfWeek: [1, 4], // Mon, Thu
+    updatedAt: '2026-09-01T10:00:00Z',
+    exercises: [
+      {
+        exerciseId: 'ex-chest-bench-press',
+        targetSets: 4,
+        targetReps: '6-8',
+        targetRpe: 8.5,
+        defaultRestSeconds: 120,
+      },
+      {
+        exerciseId: 'ex-chest-incline-db-press',
+        targetSets: 3,
+        targetReps: '8-10',
+        targetRpe: 8,
+        defaultRestSeconds: 90,
+      },
+      {
+        exerciseId: 'ex-sh-db-lateral-raise',
+        targetSets: 4,
+        targetReps: '12-15',
+        targetRpe: 9,
+        defaultRestSeconds: 60,
+        supersetId: 'A',
+      },
+      {
+        exerciseId: 'ex-arm-tricep-pushdown',
+        targetSets: 3,
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        defaultRestSeconds: 60,
+        supersetId: 'A',
+      },
+      {
+        exerciseId: 'ex-chest-cable-fly',
+        targetSets: 3,
+        targetReps: '12-15',
+        targetRpe: 9,
+        defaultRestSeconds: 60,
+      },
+    ],
+  },
+  {
+    id: 'routine-pull-a',
+    name: 'Pull & Lat Power',
+    description: 'Deadlifts, heavy rows and arm builder',
+    category: 'Pull',
+    estimatedDurationMinutes: 65,
+    daysOfWeek: [2, 5], // Tue, Fri
+    updatedAt: '2026-09-02T10:00:00Z',
+    exercises: [
+      {
+        exerciseId: 'ex-back-deadlift',
+        targetSets: 3,
+        targetReps: '5',
+        targetRpe: 9,
+        defaultRestSeconds: 180,
+      },
+      {
+        exerciseId: 'ex-back-lat-pulldown',
+        targetSets: 4,
+        targetReps: '8-10',
+        targetRpe: 8,
+        defaultRestSeconds: 90,
+      },
+      {
+        exerciseId: 'ex-back-seated-cable-row',
+        targetSets: 3,
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        defaultRestSeconds: 90,
+      },
+      {
+        exerciseId: 'ex-sh-face-pull',
+        targetSets: 3,
+        targetReps: '15',
+        targetRpe: 8,
+        defaultRestSeconds: 60,
+      },
+      {
+        exerciseId: 'ex-arm-barbell-curl',
+        targetSets: 3,
+        targetReps: '10-12',
+        targetRpe: 9,
+        defaultRestSeconds: 75,
+      },
+    ],
+  },
+  {
+    id: 'routine-legs-a',
+    name: 'Legs & Core Foundation',
+    description: 'Squat strength, hamstring hinges and calves',
+    category: 'Legs',
+    estimatedDurationMinutes: 70,
+    daysOfWeek: [3, 6], // Wed, Sat
+    updatedAt: '2026-09-03T10:00:00Z',
+    exercises: [
+      {
+        exerciseId: 'ex-leg-barbell-squat',
+        targetSets: 4,
+        targetReps: '6-8',
+        targetRpe: 8.5,
+        defaultRestSeconds: 150,
+      },
+      {
+        exerciseId: 'ex-leg-romanian-deadlift',
+        targetSets: 3,
+        targetReps: '8-10',
+        targetRpe: 8,
+        defaultRestSeconds: 120,
+      },
+      {
+        exerciseId: 'ex-leg-press',
+        targetSets: 3,
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        defaultRestSeconds: 90,
+      },
+      {
+        exerciseId: 'ex-leg-curl',
+        targetSets: 3,
+        targetReps: '12-15',
+        targetRpe: 9,
+        defaultRestSeconds: 60,
+      },
+      {
+        exerciseId: 'ex-core-hanging-leg-raise',
+        targetSets: 3,
+        targetReps: '12',
+        targetRpe: 8.5,
+        defaultRestSeconds: 60,
+      },
+    ],
+  },
+];
+
+export const INITIAL_PROGRAMS: WorkoutProgram[] = [
+  {
+    id: 'prog-ppl',
+    name: 'Push / Pull / Legs (PPL)',
+    description: 'The premier classic 6-day split for maximum hypertrophy and recovery distribution.',
+    daysPerWeek: 6,
+    routineIds: ['routine-push-a', 'routine-pull-a', 'routine-legs-a'],
+    schedule: [
+      { dayName: 'Monday', routineId: 'routine-push-a', isRestDay: false },
+      { dayName: 'Tuesday', routineId: 'routine-pull-a', isRestDay: false },
+      { dayName: 'Wednesday', routineId: 'routine-legs-a', isRestDay: false },
+      { dayName: 'Thursday', routineId: 'routine-push-a', isRestDay: false },
+      { dayName: 'Friday', routineId: 'routine-pull-a', isRestDay: false },
+      { dayName: 'Saturday', routineId: 'routine-legs-a', isRestDay: false },
+      { dayName: 'Sunday', isRestDay: true },
+    ],
+  },
+];
+
+// Historical workouts to provide rich immediate charts and monthly progress
+export const INITIAL_WORKOUTS: WorkoutSession[] = [
+  {
+    id: 'workout-hist-1',
+    name: 'Push Hypertrophy',
+    date: '2026-09-08',
+    startTime: '2026-09-08T17:30:00Z',
+    endTime: '2026-09-08T18:32:00Z',
+    durationSeconds: 3720,
+    routineId: 'routine-push-a',
+    volumeTotal: 8420,
+    totalSets: 14,
+    prsAchieved: [],
+    isCompleted: true,
+    notes: 'Solid chest day, felt great energy.',
+    exercises: [
+      {
+        id: 'we-1',
+        exerciseId: 'ex-chest-bench-press',
+        sets: [
+          { id: 's1', setNumber: 1, type: 'warmup', weight: 50, reps: 10, isCompleted: true },
+          { id: 's2', setNumber: 2, type: 'normal', weight: 80, reps: 8, rpe: 8, isCompleted: true },
+          { id: 's3', setNumber: 3, type: 'normal', weight: 80, reps: 8, rpe: 8.5, isCompleted: true },
+          { id: 's4', setNumber: 4, type: 'normal', weight: 80, reps: 7, rpe: 9, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-2',
+        exerciseId: 'ex-chest-incline-db-press',
+        sets: [
+          { id: 's5', setNumber: 1, type: 'normal', weight: 28, reps: 10, rpe: 8, isCompleted: true },
+          { id: 's6', setNumber: 2, type: 'normal', weight: 28, reps: 10, rpe: 8.5, isCompleted: true },
+          { id: 's7', setNumber: 3, type: 'normal', weight: 28, reps: 8, rpe: 9, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-3',
+        exerciseId: 'ex-sh-db-lateral-raise',
+        supersetId: 'A',
+        sets: [
+          { id: 's8', setNumber: 1, type: 'normal', weight: 12, reps: 15, isCompleted: true },
+          { id: 's9', setNumber: 2, type: 'normal', weight: 12, reps: 14, isCompleted: true },
+          { id: 's10', setNumber: 3, type: 'normal', weight: 12, reps: 12, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-4',
+        exerciseId: 'ex-arm-tricep-pushdown',
+        supersetId: 'A',
+        sets: [
+          { id: 's11', setNumber: 1, type: 'normal', weight: 25, reps: 12, isCompleted: true },
+          { id: 's12', setNumber: 2, type: 'normal', weight: 25, reps: 12, isCompleted: true },
+          { id: 's13', setNumber: 3, type: 'normal', weight: 25, reps: 10, isCompleted: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'workout-hist-2',
+    name: 'Pull & Lat Power',
+    date: '2026-09-12',
+    startTime: '2026-09-12T18:00:00Z',
+    endTime: '2026-09-12T19:08:00Z',
+    durationSeconds: 4080,
+    routineId: 'routine-pull-a',
+    volumeTotal: 9640,
+    totalSets: 15,
+    prsAchieved: [],
+    isCompleted: true,
+    exercises: [
+      {
+        id: 'we-21',
+        exerciseId: 'ex-back-deadlift',
+        sets: [
+          { id: 's21', setNumber: 1, type: 'warmup', weight: 70, reps: 8, isCompleted: true },
+          { id: 's22', setNumber: 2, type: 'normal', weight: 120, reps: 5, rpe: 8, isCompleted: true },
+          { id: 's23', setNumber: 3, type: 'normal', weight: 125, reps: 5, rpe: 8.5, isCompleted: true },
+          { id: 's24', setNumber: 4, type: 'normal', weight: 125, reps: 5, rpe: 9, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-22',
+        exerciseId: 'ex-back-lat-pulldown',
+        sets: [
+          { id: 's25', setNumber: 1, type: 'normal', weight: 65, reps: 10, isCompleted: true },
+          { id: 's26', setNumber: 2, type: 'normal', weight: 65, reps: 10, isCompleted: true },
+          { id: 's27', setNumber: 3, type: 'normal', weight: 70, reps: 8, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-23',
+        exerciseId: 'ex-arm-barbell-curl',
+        sets: [
+          { id: 's28', setNumber: 1, type: 'normal', weight: 32.5, reps: 10, isCompleted: true },
+          { id: 's29', setNumber: 2, type: 'normal', weight: 32.5, reps: 10, isCompleted: true },
+          { id: 's30', setNumber: 3, type: 'drop', weight: 25, reps: 12, isCompleted: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'workout-hist-3',
+    name: 'Legs & Core Foundation',
+    date: '2026-09-16',
+    startTime: '2026-09-16T17:15:00Z',
+    endTime: '2026-09-16T18:25:00Z',
+    durationSeconds: 4200,
+    routineId: 'routine-legs-a',
+    volumeTotal: 12450,
+    totalSets: 16,
+    prsAchieved: [],
+    isCompleted: true,
+    exercises: [
+      {
+        id: 'we-31',
+        exerciseId: 'ex-leg-barbell-squat',
+        sets: [
+          { id: 's31', setNumber: 1, type: 'warmup', weight: 60, reps: 10, isCompleted: true },
+          { id: 's32', setNumber: 2, type: 'normal', weight: 100, reps: 8, rpe: 8, isCompleted: true },
+          { id: 's33', setNumber: 3, type: 'normal', weight: 105, reps: 8, rpe: 8.5, isCompleted: true },
+          { id: 's34', setNumber: 4, type: 'normal', weight: 105, reps: 7, rpe: 9, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-32',
+        exerciseId: 'ex-leg-romanian-deadlift',
+        sets: [
+          { id: 's35', setNumber: 1, type: 'normal', weight: 80, reps: 10, isCompleted: true },
+          { id: 's36', setNumber: 2, type: 'normal', weight: 85, reps: 9, isCompleted: true },
+          { id: 's37', setNumber: 3, type: 'normal', weight: 85, reps: 8, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-33',
+        exerciseId: 'ex-leg-press',
+        sets: [
+          { id: 's38', setNumber: 1, type: 'normal', weight: 180, reps: 12, isCompleted: true },
+          { id: 's39', setNumber: 2, type: 'normal', weight: 200, reps: 10, isCompleted: true },
+          { id: 's40', setNumber: 3, type: 'normal', weight: 200, reps: 10, isCompleted: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'workout-hist-4',
+    name: 'Push Hypertrophy',
+    date: '2026-09-22',
+    startTime: '2026-09-22T17:45:00Z',
+    endTime: '2026-09-22T18:50:00Z',
+    durationSeconds: 3900,
+    routineId: 'routine-push-a',
+    volumeTotal: 9180,
+    totalSets: 14,
+    prsAchieved: [
+      {
+        id: 'pr-bench-1',
+        exerciseId: 'ex-chest-bench-press',
+        exerciseName: 'Barbell Bench Press',
+        type: 'weight',
+        value: 85,
+        previousValue: 80,
+        achievedAt: '2026-09-22',
+        workoutId: 'workout-hist-4',
+        repsAtWeight: 7,
+        unit: 'kg',
+      },
+    ],
+    isCompleted: true,
+    notes: 'Hit 85kg on bench press for 7 reps! New PR!',
+    exercises: [
+      {
+        id: 'we-41',
+        exerciseId: 'ex-chest-bench-press',
+        sets: [
+          { id: 's41', setNumber: 1, type: 'warmup', weight: 50, reps: 10, isCompleted: true },
+          { id: 's42', setNumber: 2, type: 'normal', weight: 82.5, reps: 8, rpe: 8, isCompleted: true },
+          { id: 's43', setNumber: 3, type: 'normal', weight: 85, reps: 7, rpe: 8.5, isCompleted: true },
+          { id: 's44', setNumber: 4, type: 'normal', weight: 85, reps: 6, rpe: 9.5, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-42',
+        exerciseId: 'ex-chest-incline-db-press',
+        sets: [
+          { id: 's45', setNumber: 1, type: 'normal', weight: 30, reps: 9, isCompleted: true },
+          { id: 's46', setNumber: 2, type: 'normal', weight: 30, reps: 8, isCompleted: true },
+          { id: 's47', setNumber: 3, type: 'normal', weight: 30, reps: 8, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-43',
+        exerciseId: 'ex-sh-db-lateral-raise',
+        supersetId: 'A',
+        sets: [
+          { id: 's48', setNumber: 1, type: 'normal', weight: 13, reps: 15, isCompleted: true },
+          { id: 's49', setNumber: 2, type: 'normal', weight: 13, reps: 14, isCompleted: true },
+          { id: 's50', setNumber: 3, type: 'normal', weight: 13, reps: 12, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-44',
+        exerciseId: 'ex-arm-tricep-pushdown',
+        supersetId: 'A',
+        sets: [
+          { id: 's51', setNumber: 1, type: 'normal', weight: 27.5, reps: 12, isCompleted: true },
+          { id: 's52', setNumber: 2, type: 'normal', weight: 27.5, reps: 11, isCompleted: true },
+          { id: 's53', setNumber: 3, type: 'failure', weight: 27.5, reps: 9, isCompleted: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'workout-hist-5',
+    name: 'Pull & Lat Power',
+    date: '2026-09-26',
+    startTime: '2026-09-26T18:10:00Z',
+    endTime: '2026-09-26T19:15:00Z',
+    durationSeconds: 3900,
+    routineId: 'routine-pull-a',
+    volumeTotal: 10420,
+    totalSets: 15,
+    prsAchieved: [
+      {
+        id: 'pr-dl-1',
+        exerciseId: 'ex-back-deadlift',
+        exerciseName: 'Conventional Barbell Deadlift',
+        type: 'weight',
+        value: 130,
+        previousValue: 125,
+        achievedAt: '2026-09-26',
+        workoutId: 'workout-hist-5',
+        repsAtWeight: 5,
+        unit: 'kg',
+      },
+    ],
+    isCompleted: true,
+    exercises: [
+      {
+        id: 'we-51',
+        exerciseId: 'ex-back-deadlift',
+        sets: [
+          { id: 's54', setNumber: 1, type: 'warmup', weight: 80, reps: 6, isCompleted: true },
+          { id: 's55', setNumber: 2, type: 'normal', weight: 125, reps: 5, rpe: 8, isCompleted: true },
+          { id: 's56', setNumber: 3, type: 'normal', weight: 130, reps: 5, rpe: 8.5, isCompleted: true },
+          { id: 's57', setNumber: 4, type: 'normal', weight: 130, reps: 4, rpe: 9, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-52',
+        exerciseId: 'ex-back-lat-pulldown',
+        sets: [
+          { id: 's58', setNumber: 1, type: 'normal', weight: 70, reps: 10, isCompleted: true },
+          { id: 's59', setNumber: 2, type: 'normal', weight: 70, reps: 9, isCompleted: true },
+          { id: 's60', setNumber: 3, type: 'normal', weight: 70, reps: 8, isCompleted: true },
+        ],
+      },
+      {
+        id: 'we-53',
+        exerciseId: 'ex-arm-barbell-curl',
+        sets: [
+          { id: 's61', setNumber: 1, type: 'normal', weight: 35, reps: 10, isCompleted: true },
+          { id: 's62', setNumber: 2, type: 'normal', weight: 35, reps: 9, isCompleted: true },
+          { id: 's63', setNumber: 3, type: 'normal', weight: 35, reps: 8, isCompleted: true },
+        ],
+      },
+    ],
+  },
+];
+
+export const INITIAL_BODY_WEIGHTS: BodyWeightLog[] = [
+  { id: 'bw-1', date: '2026-09-01', weightKg: 79.2, bodyFatPercent: 16.5 },
+  { id: 'bw-2', date: '2026-09-05', weightKg: 79.0, bodyFatPercent: 16.3 },
+  { id: 'bw-3', date: '2026-09-09', weightKg: 78.8, bodyFatPercent: 16.1 },
+  { id: 'bw-4', date: '2026-09-13', weightKg: 78.6, bodyFatPercent: 15.8 },
+  { id: 'bw-5', date: '2026-09-17', weightKg: 78.4, bodyFatPercent: 15.6 },
+  { id: 'bw-6', date: '2026-09-21', weightKg: 78.3, bodyFatPercent: 15.4 },
+  { id: 'bw-7', date: '2026-09-25', weightKg: 78.1, bodyFatPercent: 15.2 },
+  { id: 'bw-8', date: '2026-09-28', weightKg: 77.9, bodyFatPercent: 15.0, notes: 'Post-morning fast' },
+];
+
+export const INITIAL_BODY_MEASUREMENTS: BodyMeasurementLog[] = [
+  {
+    id: 'bm-1',
+    date: '2026-09-01',
+    chestCm: 104,
+    waistCm: 82,
+    armsCm: 38,
+    thighsCm: 60,
+    calvesCm: 37,
+    hipsCm: 98,
+    neckCm: 39,
+  },
+  {
+    id: 'bm-2',
+    date: '2026-09-15',
+    chestCm: 104.5,
+    waistCm: 81.5,
+    armsCm: 38.3,
+    thighsCm: 60.5,
+    calvesCm: 37,
+    hipsCm: 97.5,
+    neckCm: 39,
+  },
+  {
+    id: 'bm-3',
+    date: '2026-09-28',
+    chestCm: 105.2,
+    waistCm: 80.8,
+    armsCm: 38.7,
+    thighsCm: 61.2,
+    calvesCm: 37.2,
+    hipsCm: 97.0,
+    neckCm: 39,
+  },
+];

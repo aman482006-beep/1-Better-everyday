@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-app: #000000;
+    --bg-surface: #09090b;
+    --bg-surface-subtle: #121215;
+    --bg-surface-elevated: #1a1a1e;
+    --border-subtle: #222226;
+    --border-strong: #383842;
+    --text-main: #ffffff;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --accent: #ffffff;
+    --accent-text: #000000;
+    --accent-hover: #e4e4e7;
+    --accent-subtle: rgba(255, 255, 255, 0.12);
+    --accent-ring: rgba(255, 255, 255, 0.35);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  .dark {
+    --bg-app: #000000;
+    --bg-surface: #09090b;
+    --bg-surface-subtle: #121215;
+    --bg-surface-elevated: #1a1a1e;
+    --border-subtle: #222226;
+    --border-strong: #383842;
+    --text-main: #ffffff;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --accent: #ffffff;
+    --accent-text: #000000;
+    --accent-hover: #e4e4e7;
+    --accent-subtle: rgba(255, 255, 255, 0.12);
+    --accent-ring: rgba(255, 255, 255, 0.35);
+  }
+
+  .font-display {
+    font-family: 'Syne', system-ui, -apple-system, sans-serif;
+  }
+
+  .font-mono-numbers {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+}
+
+/* Reusable semantic theme utility classes */
+.bg-app {
+  background-color: var(--bg-app);
+}
+.bg-surface {
+  background-color: var(--bg-surface);
+}
+.bg-surface-subtle {
+  background-color: var(--bg-surface-subtle);
+}
+.bg-surface-elevated {
+  background-color: var(--bg-surface-elevated);
+}
+.border-subtle {
+  border-color: var(--border-subtle);
+}
+.border-strong {
+  border-color: var(--border-strong);
+}
+.border-main {
+  border-color: var(--text-main);
+}
+.text-main {
+  color: var(--text-main);
+}
+.text-secondary {
+  color: var(--text-secondary);
+}
+.text-muted {
+  color: var(--text-muted);
+}
+.text-accent {
+  color: var(--accent);
+}
+.bg-accent {
+  background-color: var(--accent);
+  color: var(--accent-text);
+}
+.border-accent {
+  border-color: var(--accent);
+}
+.bg-accent-subtle {
+  background-color: var(--accent-subtle);
+}
+.btn-accent {
+  background-color: var(--accent);
+  color: var(--accent-text);
+}
+.btn-accent:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Safe area insets for mobile */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Prevent text zoom / selection flicker on rapid tapping */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+

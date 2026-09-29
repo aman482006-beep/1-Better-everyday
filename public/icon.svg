@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#090d16" />
+  <rect x="24" y="24" width="464" height="464" rx="92" stroke="url(#grad1)" stroke-width="6" opacity="0.3" />
+  <!-- Hexagonal plate outer -->
+  <path d="M256 76 L406 162 V334 L256 420 L106 334 V162 Z" fill="#111827" stroke="url(#grad1)" stroke-width="12" stroke-linejoin="round" />
+  <!-- Inner weight plate ring -->
+  <circle cx="256" cy="248" r="92" stroke="url(#grad1)" stroke-width="10" opacity="0.4" fill="#0b1120" />
+  <!-- Dumbbell / Arrow power core -->
+  <path d="M196 248 H316" stroke="url(#metal)" stroke-width="18" stroke-linecap="round" />
+  <rect x="176" y="212" width="20" height="72" rx="6" fill="url(#grad1)" />
+  <rect x="316" y="212" width="20" height="72" rx="6" fill="url(#grad1)" />
+  <rect x="152" y="222" width="16" height="52" rx="4" fill="#38bdf8" />
+  <rect x="344" y="222" width="16" height="52" rx="4" fill="#38bdf8" />
+  <!-- Apex chevron / growth arrow -->
+  <path d="M216 168 L256 128 L296 168" stroke="#38bdf8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Wordmark badge text -->
+  <text x="256" y="380" text-anchor="middle" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="34" font-weight="900" letter-spacing="6">AEROLIFT</text>
+</svg>
